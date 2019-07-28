@@ -19,8 +19,6 @@ async function drawChart(){
     }).sort((a,b)=>  a.start-b.start);
     
   const sorting = "time";
-  //console.table(data)
-
   const dynasties = d3.nest().key(d=>d.dynasty).entries(data).map(d=>d.key)
   const dataByDeathCause = d3.nest().key(d=>d.deathcause).entries(data);
   const deathCauses = dataByDeathCause.map(d=>d.key)
@@ -78,9 +76,6 @@ async function drawChart(){
   filteredData.forEach(d=> d.color = d3.color(color(d.name)))
   console.table(filteredData)
 
-  let parent =  this;
-  parent = document.createElement("div");
-
   const svg = d3.select("#wrapper")
     .append("svg")
       .attr("width", dimensions.width)
@@ -90,7 +85,7 @@ async function drawChart(){
     .append("g")
       .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.margin.top})`);
 
-  //const tooltip = d3.select(document.createElement("div")).call(createTooltip);
+  const tooltip = d3.select("#wrapper").append("div").call(createTooltip);
   const groups = g.selectAll("g")
     .data(filteredData)
     .enter()
@@ -107,16 +102,16 @@ async function drawChart(){
 
    groups
     .each(getRect)
-  //   .on("mouseover", function(d) {
-  //     d3.select(this).select("rect").attr("fill", d.color.darker())
-  //     tooltip
-  //       .style("opacity", 1)
-  //       .html(getTooltipContent(d))
-  // })
-  //   .on("mouseleave", function(d) {
-  //     d3.select(this).select("rect").attr("fill", d.color)
-  //     tooltip.style("opacity", 0)
-  // })
+    .on("mouseover", function(d) {
+      d3.select(this).select("rect").attr("fill", d.color.darker())
+      tooltip
+        .style("opacity", 1)
+        .html(getTooltipContent(d))
+  })
+    .on("mouseleave", function(d) {
+      d3.select(this).select("rect").attr("fill", d.color)
+      tooltip.style("opacity", 0)
+  })
 
   svg
     .append("g")
@@ -128,20 +123,20 @@ async function drawChart(){
     .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.height-dimensions.margin.bottom})`)
     .call(axisBottom)
 
-  // svg.on("mousemove", function(d) {
-  //   let [x,y] = d3.mouse(this);
-  //   line.attr("transform", `translate(${x} 0)`);
-  //   y +=20;
-  //   if(x>dimensions.width/2) x-= 100;
+  svg.on("mousemove", function(d) {
+    let [x,y] = d3.mouse(this);
+    line.attr("transform", `translate(${x} 0)`);
+    y +=20;
+    if(x>dimensions.width/2) x-= 100;
 
-  //   tooltip
-  //     .style("left", x + "px")
-  //     .style("top", y + "px")
-  // })
-  // const wrapper = d3.select("#wrapper")
-  // wrapper.append(svg.node());
-  // //wrapper.append(tooltip.node());
-  // wrapper.groups = groups;
+    tooltip
+      .style("left", x + "px")
+      .style("top", y + "px")
+  })
+  const wrapper = d3.select("#wrapper")
+  wrapper.append(svg.node());
+  //wrapper.append(tooltip.node());
+  wrapper.groups = groups;
 
   const names = d3.selectAll(".name")
 
@@ -151,24 +146,11 @@ async function drawChart(){
     // .delay((d,i)=>i*10)
     .ease(d3.easeCubic)
     .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
-
-
-    // let parent = this; 
-    // console.log(parent)
-    // if (!parent) {
-    //   parent = document.createElement("div");
-    // } else {
-    // }
-    // return parent
-
   }
 
 getRect = function(d){
   const el = d3.select(this);
-
   const sx = x(d.start);
-  console.log("sx")
-  console.log(sx)
   const w = x(d.end) - x(d.start);
   const isLabelRight =(sx > dimensions.width/2 ? sx+w < dimensions.width : sx-w>0);
 
@@ -192,3 +174,28 @@ getRect = function(d){
     .style("font-size", "11px")
     .style("dominant-baseline", "hanging");
 }
+
+createTooltip = function(el) {
+  el
+    .style("position", "absolute")
+    .style("pointer-events", "none")
+    .style("top", 0)
+    .style("opacity", 0)
+    .style("background", "white")
+    .style("border-radius", "5px")
+    .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
+    .style("padding", "10px")
+    .style("line-height", "1.3")
+    .style("font", "11px sans-serif")
+
+  console.log("created tooltip")
+}
+
+getTooltipContent = function(d) {
+  return `<b>${d.name}</b>
+  <br/>
+  <b style="color:${d.color.darker()}">${d.dynasty} dynasty</b>
+  <br/>
+  ${d.start} - ${d.end}
+  `
+  }
