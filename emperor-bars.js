@@ -24,11 +24,19 @@ async function drawChart(){
   const deathCauses = dataByDeathCause.map(d=>d.key)
 
   const namesAccessor = d => d.name
-  const width = 1000
+
+  var w = window,
+    d = document,
+    e = d.documentElement,
+    b = d.getElementsByTagName('body')[0],
+    xWidth = w.innerWidth || e.clientWidth || b.clientWidth,
+    yHeight = w.innerHeight|| e.clientHeight|| b.clientHeight;
+
+  const width = xWidth;
 
     dimensions = {
       width: width,
-      height: width * 0.8,
+      height: yHeight,
       margin: {
         top: 30,
         right: 10,
@@ -73,13 +81,72 @@ async function drawChart(){
     filteredData = data.sort((a,b) => a.start-b.start);
   }
 
+  const type = d3.annotationLabel
+
+// const annotations = [{
+//   note: {
+//     label: "Longer text to show text wrapping",
+//     bgPadding: 20,
+//     title: "Annotations :)"
+//   },
+//   //can use x, y directly instead of data
+//   data: { date: "18-Sep-09", close: 185.02 },
+//   className: "show-bg",
+//   dy: 137,
+//   dx: 162
+// }]
+
+const annotations = csv.map((d,i) => {
+  return {
+    note: {
+      label: d.annotation,
+    },
+    x: x(d.end),
+    y: y(i),
+    className: i%2 ? "dotted" : "",
+  }
+})
+
+  const makeAnnotations = d3.annotation()
+  .annotations(annotations)
+
   filteredData.forEach(d=> d.color = d3.color(color(d.name)))
   console.table(filteredData)
 
+  const title = d3.select("#title")
+    .append("text")
+    .text("LIFE OF THE EMPIRE")
+
+  const subtitle = d3.select("#subtitle")
+    .append("text")
+    .text("A visualization of the reign of the Roman Emperors")
+
+  //   const WindowIsLargeEnoughForLabels = (dimensions.height > 600 ? true : false);
+  // if (!WindowIsLargeEnoughForLabels){
+  //   d3.select("#instructions")
+  //     .append("text")
+  //       .text("Hover to discover more.")
+  // }
+
   const svg = d3.select("#wrapper")
+  .append("div")
+  // Container class to make it responsive.
+  .classed("svg-container", true) 
     .append("svg")
-      .attr("width", dimensions.width)
-      .attr("height", dimensions.height)
+       // Responsive SVG needs these 2 attributes and no width and height attr.
+   .attr("preserveAspectRatio", "xMinYMin meet")
+   .attr("viewBox", `0 0 ${dimensions.width} ${dimensions.height}`)
+      // .attr("width", dimensions.width)
+      // .attr("height", dimensions.height)
+
+    // svg.append('g')
+  //   .attr('class','annotation-group')
+  //   .call(makeAnnotations)
+
+  d3.select("svg")
+  .append("g")
+  .attr("class", "annotation-group")
+  .call(makeAnnotations)
 
   const g = svg
     .append("g")
@@ -135,7 +202,6 @@ async function drawChart(){
   })
   const wrapper = d3.select("#wrapper")
   wrapper.append(svg.node());
-  //wrapper.append(tooltip.node());
   wrapper.groups = groups;
 
   const names = d3.selectAll(".name")
@@ -143,7 +209,7 @@ async function drawChart(){
   names.data(filteredData, d=>d.name)
     .enter()
     .transition()
-    // .delay((d,i)=>i*10)
+    .delay((d,i)=>i*10)
     .ease(d3.easeCubic)
     .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
   }
@@ -153,26 +219,26 @@ getRect = function(d){
   const sx = x(d.start);
   const w = x(d.end) - x(d.start);
   const isLabelRight =(sx > dimensions.width/2 ? sx+w < dimensions.width : sx-w>0);
-
+  
   el.style("cursor", "pointer")
 
   el
     .append("rect")
-    .attr("x", sx)
-    .attr("height", y.bandwidth())
-    .attr("width", w)
-    .attr("fill", d.color);
+      .attr("x", sx)
+      .attr("height", y.bandwidth())
+      .attr("width", w)
+      .attr("fill", d.color);
 
   el
     .append("text")
-    .text(d.name)
-    .attr("x",isLabelRight ? sx-5 : sx+w+5)
-    .attr("y", -4)
-    .attr("fill", "black")
-    .style("text-anchor", isLabelRight ? "end" : "start")
-    .style("font-family", "Playfair Display")
-    .style("font-size", "11px")
-    .style("dominant-baseline", "hanging");
+      .text(d.name)
+      .attr("x",isLabelRight ? sx-5 : sx+w+5)
+      .attr("y", -4)
+      .attr("fill", "black")
+      .style("text-anchor", isLabelRight ? "end" : "start")
+      .style("font-family", "Playfair Display")
+      .style("font-size", "11px")
+      .style("dominant-baseline", "hanging");
 }
 
 createTooltip = function(el) {

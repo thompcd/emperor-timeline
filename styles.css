@@ -1,0 +1,32 @@
+@font-face {
+    font-family: 'AUGUSTUS';
+    src:  url('AUGUSTUS.TTF') format('TTF');
+  }
+  
+  #wrapper {
+    overflow: hidden;
+}
+
+#title-anchor {
+    display: flex;
+    flex-direction: row;
+    font-family: "AUGUSTUS";
+    font-size: 24px;
+    justify-content: space-around;
+    padding-bottom: 8px;
+}
+
+#title{
+    padding-left: 24px;
+    text-decoration: underline;
+}
+
+#subtitle{
+    padding-right: 24px;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+#subtitle text{
+    vertical-align: middle;
+}
