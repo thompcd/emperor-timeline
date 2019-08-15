@@ -29,16 +29,14 @@ async function drawChart(){
     d = document,
     e = d.documentElement,
     b = d.getElementsByTagName('body')[0],
-    xWidth = w.innerWidth || e.clientWidth || b.clientWidth,
+    width = w.innerWidth || e.clientWidth || b.clientWidth,
     yHeight = w.innerHeight|| e.clientHeight|| b.clientHeight;
-
-  const width = xWidth;
 
     dimensions = {
       width: width,
       height: yHeight,
       margin: {
-        top: 30,
+        top: 50,
         right: 10,
         bottom: 30,
         left: 30,
@@ -50,11 +48,11 @@ async function drawChart(){
 
   x = d3.scaleTime()
     .domain([d3.min(data, d => d.start), d3.max(data, d => d.end)])
-    .range([0, dimensions.width - dimensions.margin.left - dimensions.margin.right])
+    .range([0, dimensions.boundedWidth])
 
   y= d3.scaleBand()
     .domain(d3.range(data.length))
-    .range([0,dimensions.height - dimensions.margin.bottom - dimensions.margin.top])
+    .range([0,dimensions.boundedHeight - dimensions.margin.bottom - dimensions.margin.top])
     .padding(0.2)
 
   const axisBottom = d3.axisBottom(x)
@@ -62,7 +60,7 @@ async function drawChart(){
     .ticks(d3.timeYear.every(15))
 
   const axisTop = d3.axisTop(x)
-    .tickPadding(5)
+    .tickPadding(2)
     .ticks(d3.timeYear.every(15))
 
   const color = d3.scaleOrdinal(d3.schemeSet2).domain(dynasties)
@@ -81,34 +79,24 @@ async function drawChart(){
     filteredData = data.sort((a,b) => a.start-b.start);
   }
 
-  const type = d3.annotationLabel
+//   const type = d3.annotationLabel
 
-// const annotations = [{
-//   note: {
-//     label: "Longer text to show text wrapping",
-//     bgPadding: 20,
-//     title: "Annotations :)"
-//   },
-//   //can use x, y directly instead of data
-//   data: { date: "18-Sep-09", close: 185.02 },
-//   className: "show-bg",
-//   dy: 137,
-//   dx: 162
-// }]
+// const annotations = data.map((d,i) => {
+//   return {
+//     note: {
+//       label: d.annotation,
+//     },
+//     dx: x(d.end),
+//     dy: y(i),
+//     x: x(d.end),
+//     y: y(i),
+//     className: d.annotation == "" ? "hidden" : "",
+//   }
+// })
 
-const annotations = csv.map((d,i) => {
-  return {
-    note: {
-      label: d.annotation,
-    },
-    x: x(d.end),
-    y: y(i),
-    className: i%2 ? "dotted" : "",
-  }
-})
-
-  const makeAnnotations = d3.annotation()
-  .annotations(annotations)
+//   const makeAnnotations = d3.annotation()
+//   .editMode(true)
+//   .annotations(annotations)
 
   filteredData.forEach(d=> d.color = d3.color(color(d.name)))
   console.table(filteredData)
@@ -135,18 +123,12 @@ const annotations = csv.map((d,i) => {
     .append("svg")
        // Responsive SVG needs these 2 attributes and no width and height attr.
    .attr("preserveAspectRatio", "xMinYMin meet")
-   .attr("viewBox", `0 0 ${dimensions.width} ${dimensions.height}`)
-      // .attr("width", dimensions.width)
-      // .attr("height", dimensions.height)
+   .attr("viewBox", `0 0 ${dimensions.width} ${dimensions.boundedHeight}`);
 
-    // svg.append('g')
-  //   .attr('class','annotation-group')
-  //   .call(makeAnnotations)
-
-  d3.select("svg")
-  .append("g")
-  .attr("class", "annotation-group")
-  .call(makeAnnotations)
+  // d3.select("svg")
+  // .append("g")
+  // .attr("class", "annotation-group")
+  // .call(makeAnnotations)
 
   const g = svg
     .append("g")
@@ -157,27 +139,28 @@ const annotations = csv.map((d,i) => {
     .data(filteredData)
     .enter()
     .append("g")
-      .attr("class", "name")
+      .attr("class", "name");
 
   const line = svg.append("line")
     .attr("y1", dimensions.margin.top-10)
-    .attr("y2", dimensions.height-dimensions.margin.bottom)
+    .attr("y2", dimensions.boundedHeight-dimensions.margin.bottom)
     .attr("stroke", "rgba(0,0,0,0.5)")
       .style("pointer-events","none");
 
   groups.attr("transform", (d,i)=>`translate(0 ${y(i)})`)
 
-   groups
-    .each(getRect)
-    .on("mouseover", function(d) {
-      d3.select(this).select("rect").attr("fill", d.color.darker())
-      tooltip
-        .style("opacity", 1)
-        .html(getTooltipContent(d))
+  groups
+  .each(getRect)
+  .on("mouseover", function(d) {
+    d3.select(this).select("rect").attr("fill", d.color.darker())
+    tooltip
+      .style("opacity", 1)
+      .html(getTooltipContent(d))
   })
-    .on("mouseleave", function(d) {
-      d3.select(this).select("rect").attr("fill", d.color)
-      tooltip.style("opacity", 0)
+  .on("mouseleave", function(d) {
+    d3.select(this).select("rect").attr("fill", d.color)
+    tooltip
+      .style("opacity", 0)
   })
 
   svg
@@ -187,7 +170,7 @@ const annotations = csv.map((d,i) => {
 
   svg
     .append("g")
-    .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.height-dimensions.margin.bottom})`)
+    .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.boundedHeight-dimensions.margin.bottom})`)
     .call(axisBottom)
 
   svg.on("mousemove", function(d) {

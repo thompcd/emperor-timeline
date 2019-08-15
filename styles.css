@@ -30,3 +30,7 @@
 #subtitle text{
     vertical-align: middle;
 }
+
+.hidden{
+    display: none;
+}
