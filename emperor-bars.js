@@ -2,10 +2,75 @@
 let x;
 let y;
 let dimensions;
+const time = d => d.start;
+const deathCause = d => d.cause;
+const dynastyRule = d => d.dynasty;
+let defaultFilter = time;
 
-drawChart();
+const title = d3.select("#title")
+.append("text")
+.text("LIFE OF THE EMPIRE")
 
-async function drawChart(){
+const subtitle = d3.select("#subtitle")
+.append("text")
+.text("A visualization of the reign of the Roman Emperors")
+
+var w = window,
+d = document,
+e = d.documentElement,
+b = d.getElementsByTagName('body')[0],
+width = w.innerWidth || e.clientWidth || b.clientWidth,
+yHeight = w.innerHeight|| e.clientHeight|| b.clientHeight;
+
+dimensions = {
+  width: width,
+  height: yHeight,
+  margin: {
+    top: 50,
+    right: 10,
+    bottom: 30,
+    left: 30,
+  },
+}
+
+dimensions.boundedWidth = dimensions.width - dimensions.margin.left - dimensions.margin.right
+dimensions.boundedHeight = dimensions.height - dimensions.margin.top - dimensions.margin.bottom
+
+const svg = d3.select("#wrapper")
+.append("div")
+// Container class to make it responsive.
+.classed("svg-container", true) 
+.append("svg")
+   // Responsive SVG needs these 2 attributes and no width and height attr.
+.attr("preserveAspectRatio", "xMinYMin meet")
+.attr("viewBox", `0 0 ${dimensions.width} ${dimensions.boundedHeight}`);
+
+// d3.select("svg")
+// .append("g")
+// .attr("class", "annotation-group")
+// .call(makeAnnotations)
+
+const g = svg
+.append("g")
+  .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.margin.top})`);
+
+const line = svg.append("line")
+.attr("y1", dimensions.margin.top-10)
+.attr("y2", dimensions.boundedHeight-dimensions.margin.bottom)
+.attr("stroke", "rgba(0,0,0,0.5)")
+  .style("pointer-events","none");
+
+drawChart(defaultFilter);
+
+// handle on click event
+d3.select('#opts')
+  .on('change', function() {
+    var filterType = eval(d3.select(this).property('value'));
+    console.log(filterType);
+    drawChart(filterType);
+});
+
+async function drawChart(sorting){
   const csv = await d3.csv("./emperors.csv")
 
   data = csv.map(d=>{
@@ -17,8 +82,7 @@ async function drawChart(){
       death: new Date(d.death),
     }
     }).sort((a,b)=>  a.start-b.start);
-    
-  const sorting = "time";
+
   const dynasties = d3.nest().key(d=>d.dynasty).entries(data).map(d=>d.key)
   const dataByDeathCause = d3.nest().key(d=>d.deathcause).entries(data);
   const deathCauses = dataByDeathCause.map(d=>d.key)
@@ -37,27 +101,6 @@ async function drawChart(){
 //     console.log(family + " " + size + " ==> " + pixelHeight + " pixels high.");
 //   }
 // }
-
-  var w = window,
-    d = document,
-    e = d.documentElement,
-    b = d.getElementsByTagName('body')[0],
-    width = w.innerWidth || e.clientWidth || b.clientWidth,
-    yHeight = w.innerHeight|| e.clientHeight|| b.clientHeight;
-
-    dimensions = {
-      width: width,
-      height: yHeight,
-      margin: {
-        top: 50,
-        right: 10,
-        bottom: 30,
-        left: 30,
-      },
-  }
-
-  dimensions.boundedWidth = dimensions.width - dimensions.margin.left - dimensions.margin.right
-  dimensions.boundedHeight = dimensions.height - dimensions.margin.top - dimensions.margin.bottom
 
   x = d3.scaleTime()
     .domain([d3.min(data, d => d.start), d3.max(data, d => d.end)])
@@ -114,14 +157,6 @@ async function drawChart(){
   filteredData.forEach(d=> d.color = d3.color(color(d.name)))
   //console.table(filteredData)
 
-  const title = d3.select("#title")
-    .append("text")
-    .text("LIFE OF THE EMPIRE")
-
-  const subtitle = d3.select("#subtitle")
-    .append("text")
-    .text("A visualization of the reign of the Roman Emperors")
-
   //   const WindowIsLargeEnoughForLabels = (dimensions.height > 600 ? true : false);
   // if (!WindowIsLargeEnoughForLabels){
   //   d3.select("#instructions")
@@ -129,40 +164,15 @@ async function drawChart(){
   //       .text("Hover to discover more.")
   // }
 
-  const svg = d3.select("#wrapper")
-  .append("div")
-  // Container class to make it responsive.
-  .classed("svg-container", true) 
-    .append("svg")
-       // Responsive SVG needs these 2 attributes and no width and height attr.
-   .attr("preserveAspectRatio", "xMinYMin meet")
-   .attr("viewBox", `0 0 ${dimensions.width} ${dimensions.boundedHeight}`);
-
-  // d3.select("svg")
-  // .append("g")
-  // .attr("class", "annotation-group")
-  // .call(makeAnnotations)
-
-  const g = svg
-    .append("g")
-      .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.margin.top})`);
-
   const tooltip = d3.select("#wrapper")
   .append("div")
     .call(createTooltip)
-    .attr("transform", "translateY(20)");
 
   const groups = g.selectAll("g")
     .data(filteredData)
     .enter()
     .append("g")
       .attr("class", "name");
-
-  const line = svg.append("line")
-    .attr("y1", dimensions.margin.top-10)
-    .attr("y2", dimensions.boundedHeight-dimensions.margin.bottom)
-    .attr("stroke", "rgba(0,0,0,0.5)")
-      .style("pointer-events","none");
 
   groups.attr("transform", (d,i)=>`translate(0 ${y(i)})`)
 
@@ -172,6 +182,14 @@ async function drawChart(){
     d3.select(this)
       .select("rect")
         .attr("fill", d.color.darker())
+
+    let [x,y] = d3.mouse(this);
+    //y -= 20;
+    if(x>dimensions.width/2) x-= 100;
+
+    tooltip
+      .style("left", x + "px")
+      .style("top", y + "px")
 
     tooltip
       .style("opacity", 1)
@@ -195,15 +213,10 @@ async function drawChart(){
 
   svg
     .on("mousemove", function(d) {
-      let [x,y] = d3.mouse(this);
-      line.attr("transform", `translate(${x} 0)`);
-      y -=20;
-      if(x>dimensions.width/2) x-= 100;
+    let [x,y] = d3.mouse(this);
+    line.attr("transform", `translate(${x} 0)`);
+  })
 
-      tooltip
-        .style("left", x + "px")
-        .style("top", y + "px")
-    })
 
   const wrapper = d3.select("#wrapper")
   wrapper.append(svg.node());
@@ -273,11 +286,16 @@ createTooltip = function(el) {
 }
 
 getTooltipContent = function(d) {
+  let startDate = d.start.getUTCFullYear();
+  let startBcOrAd = startDate < 0 ? "BC" : "AD";
+  let endDate = d.end.getUTCFullYear();
+  let endBcOrAd = endDate < 0 ? "BC" : "AD";
+  
   return `<b>${d.name}</b>
   <br/>
   <b style="color:${d.color.darker()}">${d.dynasty} dynasty</b>
   <br/>
-  ${d.start.getUTCFullYear()} - ${d.end.getUTCFullYear()}
+  ${startDate} ${startBcOrAd} : ${endDate} ${endBcOrAd}
   `
   }
 
