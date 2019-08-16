@@ -25,6 +25,19 @@ async function drawChart(){
 
   const namesAccessor = d => d.name
 
+//Test font measurement
+// var exampleFamilies = ["Helvetica", "Verdana", "Times New Roman", "Courier New"];
+// var exampleSizes = [8, 10, 12, 16, 24, 36, 48, 96];
+// for(var i = 0; i < exampleFamilies.length; i++) {
+//   var family = exampleFamilies[i];
+//   for(var j = 0; j < exampleSizes.length; j++) {
+//     var size = exampleSizes[j] + "pt";
+//     var style = "font-family: " + family + "; font-size: " + size + ";";
+//     var pixelHeight = determineFontHeight(style);
+//     console.log(family + " " + size + " ==> " + pixelHeight + " pixels high.");
+//   }
+// }
+
   var w = window,
     d = document,
     e = d.documentElement,
@@ -99,7 +112,7 @@ async function drawChart(){
 //   .annotations(annotations)
 
   filteredData.forEach(d=> d.color = d3.color(color(d.name)))
-  console.table(filteredData)
+  //console.table(filteredData)
 
   const title = d3.select("#title")
     .append("text")
@@ -134,7 +147,11 @@ async function drawChart(){
     .append("g")
       .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.margin.top})`);
 
-  const tooltip = d3.select("#wrapper").append("div").call(createTooltip);
+  const tooltip = d3.select("#wrapper")
+  .append("div")
+    .call(createTooltip)
+    .attr("transform", "translateY(20)");
+
   const groups = g.selectAll("g")
     .data(filteredData)
     .enter()
@@ -152,7 +169,10 @@ async function drawChart(){
   groups
   .each(getRect)
   .on("mouseover", function(d) {
-    d3.select(this).select("rect").attr("fill", d.color.darker())
+    d3.select(this)
+      .select("rect")
+        .attr("fill", d.color.darker())
+
     tooltip
       .style("opacity", 1)
       .html(getTooltipContent(d))
@@ -173,19 +193,29 @@ async function drawChart(){
     .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.boundedHeight-dimensions.margin.bottom})`)
     .call(axisBottom)
 
-  svg.on("mousemove", function(d) {
-    let [x,y] = d3.mouse(this);
-    line.attr("transform", `translate(${x} 0)`);
-    y +=20;
-    if(x>dimensions.width/2) x-= 100;
+  svg
+    .on("mousemove", function(d) {
+      let [x,y] = d3.mouse(this);
+      line.attr("transform", `translate(${x} 0)`);
+      y -=20;
+      if(x>dimensions.width/2) x-= 100;
 
-    tooltip
-      .style("left", x + "px")
-      .style("top", y + "px")
-  })
+      tooltip
+        .style("left", x + "px")
+        .style("top", y + "px")
+    })
+
   const wrapper = d3.select("#wrapper")
   wrapper.append(svg.node());
   wrapper.groups = groups;
+
+  // wrapper
+  // .on("resize", function(d) {
+  //   var tempRect = d3.select(".emperor-rect")
+
+  //   console.log("on resize test")
+  //   console.log(tempRect);
+  // })
 
   const names = d3.selectAll(".name")
 
@@ -202,6 +232,7 @@ getRect = function(d){
   const sx = x(d.start);
   const w = x(d.end) - x(d.start);
   const isLabelRight =(sx > dimensions.width/2 ? sx+w < dimensions.width : sx-w>0);
+  const isLabelVisible = (y.bandwidth() > 6 ? true : false);
   
   el.style("cursor", "pointer")
 
@@ -219,8 +250,9 @@ getRect = function(d){
       .attr("y", -4)
       .attr("fill", "black")
       .style("text-anchor", isLabelRight ? "end" : "start")
+      .style("display", isLabelVisible ? "" : "none")
       .style("font-family", "Playfair Display")
-      .style("font-size", "11px")
+      .style("font-size", "9px")
       .style("dominant-baseline", "hanging");
 }
 
@@ -235,7 +267,7 @@ createTooltip = function(el) {
     .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
     .style("padding", "10px")
     .style("line-height", "1.3")
-    .style("font", "11px sans-serif")
+    .style("font", "11px AUGUSTUS")
 
   console.log("created tooltip")
 }
@@ -245,6 +277,19 @@ getTooltipContent = function(d) {
   <br/>
   <b style="color:${d.color.darker()}">${d.dynasty} dynasty</b>
   <br/>
-  ${d.start} - ${d.end}
+  ${d.start.getUTCFullYear()} - ${d.end.getUTCFullYear()}
   `
   }
+
+  /// Sample fontStyle: var style = "font-family: " + family + "; font-size: " + size + ";"; ///
+  var determineFontHeight = function(fontStyle) {
+    var body = document.getElementsByTagName("body")[0];
+    var dummy = document.createElement("div");
+    var dummyText = document.createTextNode("M");
+    dummy.appendChild(dummyText);
+    dummy.setAttribute("style", fontStyle);
+    body.appendChild(dummy);
+    var result = dummy.offsetHeight;
+    body.removeChild(dummy);
+    return result;
+  };
