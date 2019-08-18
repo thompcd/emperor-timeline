@@ -5,15 +5,15 @@ let dimensions;
 const time = d => d.start;
 const deathCause = d => d.cause;
 const dynastyRule = d => d.dynasty;
-let defaultFilter = time;
+let defaultFilter = d => d.name;
 
 const title = d3.select("#title")
-.append("text")
-.text("LIFE OF THE EMPIRE")
+  .append("text")
+  .text("LIFE OF THE EMPIRE")
 
 const subtitle = d3.select("#subtitle")
-.append("text")
-.text("A visualization of the reign of the Roman Emperors")
+  .append("text")
+  .text("A visualization of the reign of the Roman Emperors")
 
 var w = window,
 d = document,
@@ -26,10 +26,10 @@ dimensions = {
   width: width,
   height: yHeight,
   margin: {
-    top: 50,
+    top: 30,
     right: 10,
-    bottom: 30,
-    left: 30,
+    bottom: 20,
+    left: 10,
   },
 }
 
@@ -62,13 +62,38 @@ const line = svg.append("line")
 
 drawChart(defaultFilter);
 
+var titleOffsets = document.getElementById('title').getBoundingClientRect();
+var swordOffsets = document.getElementById('sword').getBoundingClientRect();
+
+//on-load
+dynamics.animate(document.querySelector('#sword'), {
+  //translate sword right - title left
+  translateX: (titleOffsets.left - swordOffsets.left - 4)
+},{
+  type: dynamics.gravity,
+  bounciness: 250,
+  elasticity: 150
+});
+
 // handle on click event
 d3.select('#opts')
   .on('change', function() {
     var filterType = eval(d3.select(this).property('value'));
-    console.log(filterType);
-    drawChart(filterType);
+    if (filterType == "time"){
+      defaultFilter = d.name;
+    }
+    else if (filterType == "deathCause"){
+      defaultFilter = d.cause;
+    }
+    else if (filterType == "dynastyRule"){
+      defaultFilter = d.dynasty;
+    }
+
+    console.log(defaultFilter);
+    drawChart(defaultFilter);
 });
+
+
 
 async function drawChart(sorting){
   const csv = await d3.csv("./emperors.csv")
@@ -83,11 +108,10 @@ async function drawChart(sorting){
     }
     }).sort((a,b)=>  a.start-b.start);
 
-  const dynasties = d3.nest().key(d=>d.dynasty).entries(data).map(d=>d.key)
-  const dataByDeathCause = d3.nest().key(d=>d.deathcause).entries(data);
-  const deathCauses = dataByDeathCause.map(d=>d.key)
-
-  const namesAccessor = d => d.name
+  const dynasties = d3.nest().key(d=>d.start).entries(data).map(d=>d.key)
+  // const dataByDeathCause = d3.nest().key(d=>d.deathcause).entries(data);
+  // const deathCauses = dataByDeathCause.map(d=>d.key)
+  // const namesAccessor = d => d.name
 
 //Test font measurement
 // var exampleFamilies = ["Helvetica", "Verdana", "Times New Roman", "Courier New"];
@@ -119,54 +143,46 @@ async function drawChart(sorting){
     .tickPadding(2)
     .ticks(d3.timeYear.every(15))
 
-  const color = d3.scaleOrdinal(d3.schemeSet2).domain(dynasties)
-
-  const exitTransition = d3.transition()
-    .duration(600)
-
-  const updateTransition = exitTransition.transition()
-    .duration(600)
-
-  let filteredData;
-
-  if(sorting != "time") {
-    filteredData = [].concat.apply([], dataByDeathCause.map(d=>d.values));
-  } else { 
-    filteredData = data.sort((a,b) => a.start-b.start);
-  }
-
-//   const type = d3.annotationLabel
-
-// const annotations = data.map((d,i) => {
-//   return {
-//     note: {
-//       label: d.annotation,
-//     },
-//     dx: x(d.end),
-//     dy: y(i),
-//     x: x(d.end),
-//     y: y(i),
-//     className: d.annotation == "" ? "hidden" : "",
-//   }
-// })
-
-//   const makeAnnotations = d3.annotation()
-//   .editMode(true)
-//   .annotations(annotations)
-
-  filteredData.forEach(d=> d.color = d3.color(color(d.name)))
-  //console.table(filteredData)
-
-  //   const WindowIsLargeEnoughForLabels = (dimensions.height > 600 ? true : false);
-  // if (!WindowIsLargeEnoughForLabels){
-  //   d3.select("#instructions")
-  //     .append("text")
-  //       .text("Hover to discover more.")
+    // const exitTransition = d3.transition()
+    // .duration(600)
+    
+    // const updateTransition = exitTransition.transition()
+    // .duration(600)
+    
+    let filteredData = data;
+    
+  // if(sorting != "time") {
+  //   filteredData = [].concat.apply([], dataByDeathCause.map(d=>d.values));
+  // } else { 
+  //   filteredData = data.sort((a,b) => a.start-b.start);
   // }
-
+  
+  //   const type = d3.annotationLabel
+  
+  // const annotations = data.map((d,i) => {
+  //   return {
+  //     note: {
+  //       label: d.annotation,
+  //     },
+  //     dx: x(d.end),
+  //     dy: y(i),
+  //     x: x(d.end),
+  //     y: y(i),
+  //     className: d.annotation == "" ? "hidden" : "",
+  //   }
+  // })
+  
+  //   const makeAnnotations = d3.annotation()
+  //   .editMode(true)
+  //   .annotations(annotations)
+  
+  //map a discrete domain to discrete range
+  const color = d3.scaleOrdinal(d3.schemeSet2).domain(dynasties)
+  filteredData.forEach(d=> d.color = d3.color(color(d.dynasty)))
+    
   const tooltip = d3.select("#wrapper")
   .append("div")
-    .call(createTooltip)
+  .call(createTooltip)
 
   const groups = g.selectAll("g")
     .data(filteredData)
@@ -174,33 +190,35 @@ async function drawChart(sorting){
     .append("g")
       .attr("class", "name");
 
+  //shift each group to its proper y location
   groups.attr("transform", (d,i)=>`translate(0 ${y(i)})`)
 
+  //attach rectangle to each location with its events
   groups
-  .each(getRect)
-  .on("mouseover", function(d) {
-    d3.select(this)
-      .select("rect")
-        .attr("fill", d.color.darker())
+    .each(getRect)
+    .on("mouseover", function(d) {
+      d3.select(this)
+        .select("rect")
+          .attr("fill", d.color.darker())
 
-    let [x,y] = d3.mouse(this);
-    //y -= 20;
-    if(x>dimensions.width/2) x-= 100;
+      let [x,y] = d3.mouse(this);
+      //y -= 20;
+      if(x>dimensions.width/2) x-= 100;
+      tooltip
+        .style("left", x + "px")
+        .style("top", y + "px")
 
-    tooltip
-      .style("left", x + "px")
-      .style("top", y + "px")
+      tooltip
+        .style("opacity", 1)
+        .html(getTooltipContent(d))
+    })
+    .on("mouseleave", function(d) {
+      d3.select(this).select("rect").attr("fill", d.color)
+      tooltip
+        .style("opacity", 0)
+    })
 
-    tooltip
-      .style("opacity", 1)
-      .html(getTooltipContent(d))
-  })
-  .on("mouseleave", function(d) {
-    d3.select(this).select("rect").attr("fill", d.color)
-    tooltip
-      .style("opacity", 0)
-  })
-
+  //draw axes
   svg
     .append("g")
     .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.margin.top-10})`)
@@ -211,6 +229,7 @@ async function drawChart(sorting){
     .attr("transform", (d,i)=>`translate(${dimensions.margin.left} ${dimensions.boundedHeight-dimensions.margin.bottom})`)
     .call(axisBottom)
 
+  //draw a vertical line on the svg canvas to aid pinpointing the x axis reading
   svg
     .on("mousemove", function(d) {
     let [x,y] = d3.mouse(this);
@@ -218,9 +237,9 @@ async function drawChart(sorting){
   })
 
 
-  const wrapper = d3.select("#wrapper")
-  wrapper.append(svg.node());
-  wrapper.groups = groups;
+  // const wrapper = d3.select("#wrapper")
+  // wrapper.append(svg.node());
+  // wrapper.groups = groups;
 
   // wrapper
   // .on("resize", function(d) {
@@ -230,23 +249,24 @@ async function drawChart(sorting){
   //   console.log(tempRect);
   // })
 
-  const names = d3.selectAll(".name")
+  // const names = d3.selectAll(".name")
 
-  names.data(filteredData, d=>d.name)
-    .enter()
-    .transition()
-    .delay((d,i)=>i*10)
-    .ease(d3.easeCubic)
-    .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
+  // names.data(filteredData, d=>d.name)
+  //   .enter()
+  //     .transition()
+  //     .delay((d,i)=>i*1000)
+  //     .ease(d3.easeCubic)
+  //     .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
   }
 
 getRect = function(d){
   const el = d3.select(this);
+  console.log("el")
   const sx = x(d.start);
+  console.log(el)
   const w = x(d.end) - x(d.start);
   const isLabelRight =(sx > dimensions.width/2 ? sx+w < dimensions.width : sx-w>0);
   const isLabelVisible = (y.bandwidth() > 6 ? true : false);
-  
   el.style("cursor", "pointer")
 
   el

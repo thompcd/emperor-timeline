@@ -4,8 +4,10 @@
   }
   
   #wrapper {
-      overflow: -hiddenß;
-    overflow: -moz-hidden-unscrollable;
+      overflow: -hidden;
+      overflow: -moz-hidden-unscrollable;
+      margin: 0;
+
 }
 
 #title-anchor {
@@ -14,7 +16,7 @@
     font-family: "AUGUSTUS";
     font-size: 24px;
     justify-content: space-around;
-    padding-bottom: 8px;
+    padding-bottom: 0px;
 }
 
 #title{
@@ -32,6 +34,19 @@
     vertical-align: middle;
 }
 
+#controls label{
+    font-size: 12px;
+}
+
 .hidden{
     display: none;
+}
+
+#sword{
+    height: 24px;
+    width: 24px;
+
+    position: absolute;
+    overflow: hidden;
+    left: -50%;
 }
